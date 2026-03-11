@@ -272,6 +272,16 @@ class User:
         """
         self.resume.edit_property("ui_elements", value)
 
+    @property
+    def ui_language(self):
+        """The preferred UI language."""
+        return self.resume.get_property("ui_language", "en")
+
+    @ui_language.setter
+    def ui_language(self, value):
+        """Set the preferred UI language."""
+        self.resume.edit_property("ui_language", value)
+
     @classmethod
     def __set_authentication_status(cls, state):
         """Sets the authentication status of the user.
@@ -322,6 +332,11 @@ class User:
         self.bookmarks.settings_file = str(Path(self.user_directory, "bookmarks.json"))
         self.resume.settings_file = str(Path(self.user_directory, "resume.json"))
         self.localization.settings_file = str(Path(self.user_directory, "localization.json"))
+        try:
+            from tik_manager4.ui import i18n
+            i18n.set_language(self.ui_language)
+        except ImportError:
+            pass
         # Check if the common folder defined in the user settings
         self.common_directory = self.common_directory or self.settings.get_property(
             "commonFolder"

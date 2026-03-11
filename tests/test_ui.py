@@ -11,6 +11,7 @@ import sys
 from tik_manager4.core import utils
 
 from tik_manager4.ui import main
+from tik_manager4.ui import i18n
 from tik_manager4.ui.Qt import QtWidgets
 from tik_manager4.ui import pick
 from tik_manager4.ui.dialog.work_dialog import NewVersionDialog
@@ -33,6 +34,8 @@ class TestUI:
         if project_path.exists():
             files.force_remove_directory(project_path)
         tik.user.set("Admin", "1234")
+        tik.user.ui_language = "en"
+        tik.user.resume.apply_settings()
         tik.create_project(str(project_path), structure_template="empty")
         return tik
 
@@ -65,6 +68,63 @@ class TestUI:
         qtbot.addWidget(m)
         assert m.windowTitle() == main.WINDOW_NAME
         assert m.objectName() == main.WINDOW_NAME
+
+    def test_main_ui_language_switch(self, qtbot, main_object):
+        m = main.launch(dcc="Standalone")
+        m.show()
+        qtbot.addWidget(m)
+
+        m.set_ui_language("zh_CN")
+        menu_texts = [_action.text().replace("&", "").strip() for _action in m.menu_bar.actions()]
+        assert "文件" in menu_texts
+        assert "语言" in menu_texts
+        assert m.tik.user.ui_language == "zh_CN"
+
+        m.set_ui_language("en")
+        menu_texts = [_action.text().replace("&", "").strip() for _action in m.menu_bar.actions()]
+        assert "File" in menu_texts
+        assert "Language" in menu_texts
+        assert i18n.get_language() == "en"
+
+    def test_launch_respects_persisted_language(self, qtbot, main_object):
+        main_object.user.ui_language = "zh_CN"
+        main_object.user.resume.apply_settings()
+        i18n.set_language("en")
+
+        m = main.launch(dcc="Standalone")
+        m.show()
+        qtbot.addWidget(m)
+
+        menu_texts = [_action.text().replace("&", "").strip() for _action in m.menu_bar.actions()]
+        assert "文件" in menu_texts
+        assert i18n.get_language() == "zh_CN"
+
+        m.set_ui_language("en")
+
+    def test_project_dialog_uses_active_language(self, qtbot, main_object):
+        i18n.ensure_translator()
+        i18n.set_language("zh_CN")
+
+        dialog = SetProjectDialog(main_object)
+        dialog.show()
+        qtbot.addWidget(dialog)
+
+        assert dialog.windowTitle() == "设置项目"
+
+    def test_open_dialog_updates_when_language_switches(self, qtbot, main_object):
+        m = main.launch(dcc="Standalone")
+        m.show()
+        qtbot.addWidget(m)
+
+        dialog = SettingsDialog(main_object)
+        dialog.show()
+        qtbot.addWidget(dialog)
+
+        m.set_ui_language("zh_CN")
+        assert dialog.windowTitle() == "设置"
+
+        m.set_ui_language("en")
+        assert dialog.windowTitle() == "Settings"
 
     def test_main_ui_buttons(self, qtbot, main_object, monkeypatch):
         self._kill_modules()

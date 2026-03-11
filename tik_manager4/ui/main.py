@@ -46,6 +46,7 @@ from tik_manager4.ui.dialog.work_dialog import (
     SaveAnyFileDialog,
     WorkFromTemplateDialog,
 )
+from tik_manager4.ui import i18n
 from tik_manager4.ui.mcv.category_mcv import TikCategoryWidget
 from tik_manager4.ui.mcv.project_mcv import TikProjectWidget
 from tik_manager4.ui.mcv.subproject_mcv import TikSubProjectWidget
@@ -76,6 +77,8 @@ def launch(dcc="Standalone", dont_show=False):
             pass
     app = QtWidgets.QApplication.instance()
     app.setAttribute(QtCore.Qt.AA_DontUseNativeMenuBar)
+    i18n.ensure_translator(app)
+    i18n.set_language(tik.user.ui_language)
     main_ui_obj = MainUI(tik, parent=parent, window_name=window_name)
     if not dont_show:
         main_ui_obj.show()
@@ -89,7 +92,9 @@ class MainUI(QtWidgets.QMainWindow):
         """Initialize the main UI."""
         # pylint: disable=too-many-statements
         super().__init__(**kwargs)
+        i18n.ensure_translator()
         self.tik = main_object
+        i18n.set_language(self.tik.user.ui_language)
 
         # show the support splash screen
         self.support_splash()
@@ -160,6 +165,7 @@ class MainUI(QtWidgets.QMainWindow):
         self.tasks_mcv = None
         self.categories_mcv = None
         self.versions_mcv = None
+        self.language_actions = {}
 
         # buttons
         self.ingest_version_btn = None
@@ -179,7 +185,8 @@ class MainUI(QtWidgets.QMainWindow):
 
         self.management_lock()
 
-        self.status_bar.showMessage("Status | Ready")
+        self.apply_ui_language(initial=True)
+        self.status_bar.showMessage(i18n.translate_text("Status | Ready"))
 
     def support_splash(self, count_limit=10):
         """Show the support splash screen if its time and not disabled."""
@@ -529,6 +536,7 @@ class MainUI(QtWidgets.QMainWindow):
         self.build_extensions()
         window_menu = self.menu_bar.addMenu("UI Elements")
         purgatory_menu = self.menu_bar.addMenu("Purgatory")
+        language_menu = self.menu_bar.addMenu("Language")
         help_menu = self.menu_bar.addMenu("Help")
 
         # File Menu
@@ -618,6 +626,17 @@ class MainUI(QtWidgets.QMainWindow):
         support_tik_manager = QtWidgets.QAction("&Support Tik Manager", self)
         help_menu.addAction(support_tik_manager)
 
+        english_action = QtWidgets.QAction("English", self)
+        english_action.setCheckable(True)
+        language_menu.addAction(english_action)
+        chinese_action = QtWidgets.QAction("Simplified Chinese", self)
+        chinese_action.setCheckable(True)
+        language_menu.addAction(chinese_action)
+        self.language_actions = {
+            "en": english_action,
+            "zh_CN": chinese_action,
+        }
+
         # SIGNALS
         create_project.triggered.connect(self.on_create_new_project)
         new_user.triggered.connect(self.on_add_new_user)
@@ -647,6 +666,12 @@ class MainUI(QtWidgets.QMainWindow):
             lambda: webbrowser.open("https://github.com/masqu3rad3/tik_manager4/issues")
         )
         support_tik_manager.triggered.connect(lambda: support_splash.launch_support(self))
+        english_action.triggered.connect(
+            lambda checked: checked and self.set_ui_language("en")
+        )
+        chinese_action.triggered.connect(
+            lambda checked: checked and self.set_ui_language("zh_CN")
+        )
 
         purge_local_purgatory.triggered.connect(self.on_purge_local_purgatory)
         purge_project_purgatory.triggered.connect(self.on_purge_project_purgatory)
@@ -660,6 +685,34 @@ class MainUI(QtWidgets.QMainWindow):
         self.buttons_visibility.toggled.connect(self.work_buttons_frame.setVisible)
 
         self.menu_bar.setMinimumWidth(self.menu_bar.sizeHint().width())
+
+    def apply_ui_language(self, initial=False):
+        """Apply the persisted UI language to the window."""
+        language = i18n.set_language(self.tik.user.ui_language)
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            i18n.localize_widget_tree(widget)
+        for code, action in self.language_actions.items():
+            action.blockSignals(True)
+            action.setChecked(code == language)
+            action.blockSignals(False)
+        if not initial:
+            self.status_bar.showMessage(
+                i18n.translate_text(
+                    "Language switched to {language}.",
+                    language=i18n.get_language_name(language),
+                ),
+                5000,
+            )
+
+    def set_ui_language(self, language):
+        """Persist and apply the UI language."""
+        normalized = i18n.normalize_language(language)
+        if normalized == self.tik.user.ui_language:
+            self.apply_ui_language()
+            return
+        self.tik.user.ui_language = normalized
+        self.tik.user.resume.apply_settings()
+        self.apply_ui_language()
 
     def toggle_purgatory_mode(self, state):
         """Toggle the visibility of deleted items."""
@@ -752,7 +805,10 @@ class MainUI(QtWidgets.QMainWindow):
         """Convenience function to connect to a management platform."""
         nice_name = platform_name.capitalize()
         wait_dialog = WaitDialog(
-                        message=f"Connecting to {nice_name}...",
+                        message=i18n.translate_text(
+                            "Connecting to {platform}...",
+                            platform=nice_name,
+                        ),
                         parent=self,
                     )
         wait_dialog.display()
@@ -760,12 +816,22 @@ class MainUI(QtWidgets.QMainWindow):
         if not handler or not handler.is_authenticated:
             wait_dialog.kill()
             self.feedback.pop_info(
-                title="Authentication Failed",
-                text=f"Authentication failed while connecting to {platform_name}\n\n{msg}",
+                title=i18n.translate_text("Authentication Failed"),
+                text=i18n.translate_text(
+                    "Authentication failed while connecting to {platform}\n\n{message}",
+                    platform=platform_name,
+                    message=msg,
+                ),
                 critical=True)
             return None
         wait_dialog.kill()
-        self.status_bar.showMessage(f"Connected to {nice_name} successfully.", 5000)
+        self.status_bar.showMessage(
+            i18n.translate_text(
+                "Connected to {platform} successfully.",
+                platform=nice_name,
+            ),
+            5000,
+        )
 
         return handler
 

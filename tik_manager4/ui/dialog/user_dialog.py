@@ -71,6 +71,7 @@ class NewUserDialog(QtWidgets.QDialog):
         form_layout.addRow("Email :", self.widgets.email_le)
 
         self.widgets.permission_level_combo = QtWidgets.QComboBox()
+        self.widgets.permission_level_combo.setProperty("i18n_translate_items", True)
         self.widgets.permission_level_combo.addItems(
             ["Observer", "Generic", "Experienced", "Admin"])
         self.widgets.permission_level_combo.setCurrentText("2")

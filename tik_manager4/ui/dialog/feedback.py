@@ -3,6 +3,7 @@ from typing import Optional, List
 import sys
 
 from tik_manager4.ui.Qt import QtWidgets
+from tik_manager4.ui import i18n
 from tik_manager4.ui import pick
 from tik_manager4.ui.widgets.common import TikMessageBox, TikButtonBox
 
@@ -78,19 +79,24 @@ class Feedback:
         on_close: Optional[callable] = None,
     ) -> int:
         """Shows an informational dialog box."""
+        i18n.ensure_translator()
         msg = TikMessageBox(parent=self.parent)
         if not self.parent:
             _style_file = pick.style_file(file_name="tikManager.qss")
             msg.setStyleSheet(str(_style_file.readAll(), "utf-8"))
         msg.setIcon(QtWidgets.QMessageBox.Critical if critical else QtWidgets.QMessageBox.Information)
-        msg.setWindowTitle(title)
+        msg.setWindowTitle(i18n.translate_text(title))
         msg.setModal(modal)
-        msg.setText(text)
-        msg.setInformativeText(details)
+        msg.setText(i18n.translate_text(text))
+        msg.setInformativeText(i18n.translate_text(details))
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
 
         ok_button = msg.button(QtWidgets.QMessageBox.Ok)
-        style_button(ok_button, label=button_label)
+        style_button(
+            ok_button,
+            label=i18n.translate_text(button_label) if button_label else None,
+        )
+        i18n.localize_widget_tree(msg)
 
         result = msg.exec_()
         if on_close:
@@ -110,6 +116,7 @@ class Feedback:
             modal: bool = True,
     ) -> Optional[str]:
         """Shows a question dialog box with configurable buttons."""
+        i18n.ensure_translator()
         if buttons is None:
             buttons = ["save", "no", "cancel"]
 
@@ -149,10 +156,10 @@ class Feedback:
             _style_file = pick.style_file(file_name="tikManager.qss")
             q.setStyleSheet(str(_style_file.readAll(), "utf-8"))
         q.setIcon(QtWidgets.QMessageBox.Question)
-        q.setWindowTitle(title)
+        q.setWindowTitle(i18n.translate_text(title))
         q.setModal(modal)
-        q.setText(text)
-        q.setInformativeText(details)
+        q.setText(i18n.translate_text(text))
+        q.setInformativeText(i18n.translate_text(details))
 
         # Combine buttons using bitwise OR operator
         combined_buttons = widgets[0]
@@ -164,6 +171,7 @@ class Feedback:
         # go over all buttons and style them
         for button in q.buttons():
             style_button(button)
+        i18n.localize_widget_tree(q)
 
         ret = q.exec_()
         for key, value in button_dict.items():
