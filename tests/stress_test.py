@@ -1,17 +1,23 @@
 """Stress tests for Tik Manager 4"""
 
-from pathlib import Path
-import shutil
-import requests
+import os
 import random
-from tik_manager4.core import filelog, utils
+import shutil
+from pathlib import Path
+
 import pytest
+import requests
+
+from tik_manager4.core import filelog, utils
+
+if os.getenv("TIK_MANAGER4_RUN_STRESS_TESTS") != "1":
+    pytest.skip("Stress tests are opt-in only.", allow_module_level=True)
 
 log = filelog.Filelog(logname=__name__, filename="tik_manager4")
 
 word_site = "https://www.mit.edu/~ecprice/wordlist.10000"
 
-response = requests.get(word_site)
+response = requests.get(word_site, timeout=15)
 WORDS = response.content.splitlines()
 
 # @pytest.mark.usefixtures("clean_user")

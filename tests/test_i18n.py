@@ -1,5 +1,9 @@
 """Tests for UI translation helpers."""
 
+import pytest
+
+pytest.importorskip("PyQt5")
+
 from tik_manager4.ui import i18n
 from tik_manager4.ui.Qt import QtWidgets
 

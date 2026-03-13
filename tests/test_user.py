@@ -4,6 +4,8 @@
 from pathlib import Path
 import pytest
 
+pytest.importorskip("PyQt5")
+
 from tik_manager4.ui.dialog import feedback
 
 

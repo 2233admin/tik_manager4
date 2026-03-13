@@ -2,6 +2,8 @@
 import os
 import pytest
 
+pytest.importorskip("PyQt5")
+
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 if IN_GITHUB_ACTIONS:
     pytest.skip("Skipping UI tests in GitHub Actions", allow_module_level=True)

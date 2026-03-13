@@ -14,20 +14,26 @@ def tik(tmp_path):
     print("----------------------------")
     mockup_commons_path = Path(tmp_path / "mockup_common")
     mockup_commons_path.mkdir(parents=True, exist_ok=True)
-    # user_home = Path(utils.get_home_dir())
-    user_path = Path().home() / "TikManager4"
-    # user_path = user_home / "TikManager4"
-    user_path.mkdir(parents=True, exist_ok=True)
-    # backup the user to the tmp_path
-    shutil.copytree(str(user_path), str(tmp_path / "user_backup"))
-    # clear the user folder
-    shutil.rmtree(str(user_path))
+    original_home = os.environ.get("HOME")
+    original_userprofile = os.environ.get("USERPROFILE")
+    sandbox_home = tmp_path / "home"
+    sandbox_home.mkdir(parents=True, exist_ok=True)
+    os.environ["HOME"] = str(sandbox_home)
+    os.environ["USERPROFILE"] = str(sandbox_home)
+    user_path = sandbox_home / "TikManager4"
     user_path.mkdir(parents=True, exist_ok=True)
     import tik_manager4
-    yield tik_manager4.initialize("Standalone", common_folder=str(mockup_commons_path))
-    # restore the original user directory
-    shutil.rmtree(str(user_path))
-    shutil.copytree(str(tmp_path / "user_backup"), str(user_path))
+    try:
+        yield tik_manager4.initialize("Standalone", common_folder=str(mockup_commons_path))
+    finally:
+        if original_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = original_home
+        if original_userprofile is None:
+            os.environ.pop("USERPROFILE", None)
+        else:
+            os.environ["USERPROFILE"] = original_userprofile
 
 
 @pytest.fixture(scope='session', autouse=True)

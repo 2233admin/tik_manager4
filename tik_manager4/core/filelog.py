@@ -1,11 +1,12 @@
 """Logging module for Tik Manager 4."""
 
+import datetime
 import logging
+import os
+import tempfile
 from pathlib import Path
 
 from tik_manager4.core import utils
-
-import datetime
 
 class Filelog:
     """Logging class handling file logging."""
@@ -14,11 +15,47 @@ class Filelog:
     last_message = None
     last_message_type = None
 
+    @staticmethod
+    def _resolve_log_dir(filedir):
+        """Return a writable directory for log files."""
+        candidates = []
+        if filedir:
+            candidates.append(Path(filedir))
+
+        home_dir = utils.get_home_dir()
+        if home_dir:
+            candidates.append(Path(home_dir))
+
+        candidates.extend(
+            [
+                Path.cwd(),
+                Path(tempfile.gettempdir()),
+            ]
+        )
+
+        checked = set()
+        for candidate in candidates:
+            candidate = candidate.expanduser()
+            candidate_key = os.fspath(candidate)
+            if candidate_key in checked:
+                continue
+            checked.add(candidate_key)
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+                probe = candidate / ".tik_manager4_write_test"
+                probe.write_text("", encoding="utf-8")
+                probe.unlink(missing_ok=True)
+                return candidate
+            except OSError:
+                continue
+
+        return Path(tempfile.gettempdir())
+
     def __init__(self, logname = None, filename="tik_manager4", filedir=None, date=True, time=True, size_cap=500000):
         # FIXME(ckutlu): Perhaps we can live with only a path argument
         super(Filelog, self).__init__()
         self.file_name = filename if filename else "defaultLog"
-        self.file_dir = filedir or utils.get_home_dir()
+        self.file_dir = self._resolve_log_dir(filedir)
         self.file_path_obj = Path(self.file_dir, f"{self.file_name}.log")
         self.logger = logging.getLogger(self.file_name)
         self.logger.setLevel(logging.DEBUG)
