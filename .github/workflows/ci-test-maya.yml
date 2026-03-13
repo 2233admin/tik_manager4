@@ -25,9 +25,10 @@ jobs:
         run: |
           wget https://bootstrap.pypa.io/pip/get-pip.py
           mayapy get-pip.py --user
+          grep -v '^pytest-qt$' requirements-dev.txt > requirements-maya.txt
           mayapy -m pip install --user \
             coverage==5.5 \
-            -r requirements-dev.txt \
+            -r requirements-maya.txt \
       - name: Environment
         run: |
           export XDG_RUNTIME_DIR=/var/tmp/runtime-root
